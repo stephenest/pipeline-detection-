@@ -9,6 +9,8 @@ import numpy as np
 import base64
 from io import BytesIO
 from PIL import Image
+from pdf2image import convert_from_path
+import os
 
 
 def _fallback_detect_pipelines(image_path, visualize=False):
@@ -50,22 +52,56 @@ def detect_pipelines(image_path, visualize=False):
     Detect line segments in the image using Canny + HoughLinesP.
 
     Args:
-        image_path (str): path to the image file.
+        image_path (str): path to the image file (PNG, JPG, or PDF).
         visualize (bool): if True, returns a base64 PNG with drawn lines as well.
 
     Returns:
         pipelines (list): list of {"source": [x1,y1], "destination": [x2,y2]} dicts.
         optionally visual (str): base64 PNG data URL when visualize=True.
     """
-    if not _cv2_available:
-        return _fallback_detect_pipelines(image_path, visualize=visualize)
+    # Handle PDF input - convert first page to PNG
+    if image_path.lower().endswith('.pdf'):
+        pages = convert_from_path(image_path, first_page=1, last_page=1)
+        if not pages:
+            raise ValueError("Could not convert PDF to image")
 
+        # Save first page as temporary PNG
+        tmp_dir = '/tmp'  # Always use system temp for consistency
+        tmp_png = os.path.join(tmp_dir, f'converted_{os.path.basename(image_path)}.png')
+        pages[0].save(tmp_png, 'PNG')
+
+        try:
+            # Process the PNG
+            result = _detect_pipelines_cv2(tmp_png, visualize=visualize) if _cv2_available else _fallback_detect_pipelines(tmp_png, visualize=visualize)
+            print(f"Pipeline detection result type: {type(result)}")  # Debug log
+            return result
+        finally:
+            # Clean up temporary PNG
+            try:
+                os.remove(tmp_png)
+            except Exception:
+                pass
+    
+    # Regular image input
+    return _detect_pipelines_cv2(image_path, visualize=visualize) if _cv2_available else _fallback_detect_pipelines(image_path, visualize=visualize)
+
+def _detect_pipelines_cv2(image_path, visualize=False):
+    """OpenCV implementation of pipeline detection."""
+    print(f"OpenCV: Detecting pipelines in {image_path}")  # Debug log
     # Read image
     img = cv2.imread(image_path)
     if img is None:
         raise ValueError('Could not read image')
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    print(f"OpenCV: Image loaded successfully, shape: {img.shape}")  # Debug log
+
+    # Convert to grayscale and ensure proper type
+    if img.dtype != np.uint8:
+        img = img.astype(np.uint8)
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = img
 
     # Blur to reduce noise
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -77,13 +113,16 @@ def detect_pipelines(image_path, visualize=False):
     lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi / 180, threshold=50, minLineLength=30, maxLineGap=10)
 
     pipelines = []
-    vis_img = img.copy()
+    vis_img = img.copy() if visualize else None
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0].tolist()
             pipelines.append({"source": [int(x1), int(y1)], "destination": [int(x2), int(y2)]})
-            if visualize:
-                cv2.line(vis_img, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    print(f"OpenCV detected pipelines type: {type(pipelines)}, length: {len(pipelines)}")  # Debug log
+    if lines is not None and visualize:
+        for line in lines:
+            x1, y1, x2, y2 = line[0].tolist()
+            cv2.line(vis_img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
     if visualize:
         # Convert BGR to RGB for PIL
