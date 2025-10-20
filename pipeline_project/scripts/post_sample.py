@@ -2,7 +2,9 @@
 """
 Simple script to POST a local sample image to the running API and print JSON response.
 Usage:
-    python scripts/post_sample.py /path/to/image.png --url http://127.0.0.1:8000/api/pipeline/
+    python scripts/post_sample.py [/path/to/image.png] --url http://127.0.0.1:8000/api/pipeline/
+
+If no image path is provided, uses the included sample from sample_input/.
 """
 import sys
 import argparse
@@ -11,7 +13,7 @@ import requests
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('image', help='Path to image file (PNG/JPG)')
+    p.add_argument('image', nargs='?', default='sample_input/sample_pid8.pdf', help='Path to image file (PNG/JPG/PDF)')
     p.add_argument('--url', default='http://127.0.0.1:8000/api/pipeline/', help='API endpoint URL')
     p.add_argument('--visualize', action='store_true', help='Request visualization data URL')
     args = p.parse_args()
