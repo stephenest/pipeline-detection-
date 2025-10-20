@@ -1,46 +1,203 @@
-# README for Pipeline Project
+# Pipeline Detection API
 
-# Pipeline Project
+A Django REST Framework-based API for detecting pipelines in engineering diagrams using OpenCV. The service provides robust pipeline detection capabilities through a RESTful interface, supporting both image files and PDF documents.
 
-This project is a Django application designed to detect pipelines in engineering diagrams using OpenCV. It provides a REST API for uploading images and receiving detected pipeline information.
+## Overview
+
+This service employs computer vision techniques to detect and analyze pipeline segments in engineering diagrams, schematics, and technical drawings. Built with Django and OpenCV, it offers a reliable API for automated pipeline analysis and documentation.
+
+## Features
+
+- Image and PDF file support with automatic format detection
+- Advanced OpenCV-based pipeline detection algorithms
+- Optional visualization output with detected segments highlighted
+- Automatic PDF to PNG conversion for processing
+- Robust error handling and input validation
+- Clean temporary file management
+- RESTful API design with comprehensive documentation
+- Docker support for easy deployment
+- Extensive test coverage
+
+## Technical Stack
+
+- Python 3.12+
+- Django 5.0+
+- Django REST Framework
+- OpenCV 4.12+
+- pdf2image for PDF processing
+- Docker and Docker Compose
+- Comprehensive test suite
+
+## API Documentation
+
+### POST /api/pipeline/
+
+Detects pipelines in the uploaded image or PDF document.
+
+**Request:**
+- Method: POST
+- Content-Type: multipart/form-data
+- Parameters:
+  - `image`: File (required) - Image file (PNG/JPG) or PDF document
+  - `visualize`: Boolean (optional) - Set to true to get visualization output
+
+**Success Response (200 OK):**
+```json
+{
+    "pipelines": [
+        {
+            "source": [x1, y1],
+            "destination": [x2, y2]
+        },
+        ...
+    ],
+    "visualization": "data:image/png;base64,..." // Only if visualize=true
+}
+```
+
+**Error Responses:**
+- 400 Bad Request: Invalid file type or missing file
+- 500 Internal Server Error: Processing error
+
+## Installation
+
+### Using Docker (Recommended)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/stephenest/pipeline-detection-.git
+   cd pipeline-detection-/pipeline_project
+   ```
+
+2. Build and run with Docker Compose:
+   ```bash
+   docker compose build
+   docker compose up -d
+   ```
+
+The API will be available at http://localhost:8000/api/pipeline/
+
+To stop the service:
+```bash
+docker compose down
+```
+
+### Manual Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/stephenest/pipeline-detection-.git
+   cd pipeline-detection-/pipeline_project
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Run migrations:
+   ```bash
+   python manage.py migrate
+   ```
+
+5. Start the development server:
+   ```bash
+   python manage.py runserver
+   ```
+
+## Usage Examples
+
+### Using cURL
+
+```bash
+# Basic pipeline detection
+curl -X POST -F "image=@/path/to/image.png" http://localhost:8000/api/pipeline/
+
+# With visualization output
+curl -X POST -F "image=@/path/to/image.png" http://localhost:8000/api/pipeline/?visualize=true
+```
+
+### Using Python
+
+```python
+import requests
+
+# Basic detection
+with open('diagram.png', 'rb') as f:
+    response = requests.post(
+        'http://localhost:8000/api/pipeline/',
+        files={'image': f}
+    )
+    pipelines = response.json()['pipelines']
+
+# With visualization
+with open('diagram.png', 'rb') as f:
+    response = requests.post(
+        'http://localhost:8000/api/pipeline/?visualize=true',
+        files={'image': f}
+    )
+    result = response.json()
+    pipelines = result['pipelines']
+    visualization = result['visualization']  # Base64 encoded PNG
+```
 
 ## Project Structure
 
 ```
-pipeline_project
+pipeline_project/
 ├── Dockerfile
-├── LICENSE
 ├── README.md
-├── docker-compose.yml
 ├── manage.py
 ├── requirements.txt
-├── pipeline_project
-│   ├── __init__.py
-│   ├── asgi.py
+├── pid/
+│   ├── views.py      # API endpoint implementation
+│   ├── utils.py      # Pipeline detection logic
+│   ├── tests.py      # Test suite
+│   └── urls.py       # API routing
+├── pipeline_project/
 │   ├── settings.py
 │   ├── urls.py
 │   └── wsgi.py
-├── pid
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── views.py
-│   ├── urls.py
-│   ├── detectors.py
-│   ├── utils.py
-│   ├── tests.py
-│   └── migrations
-│       ├── __init__.py
-│       └── 0001_initial.py
-├── sample_input
-│   └── sample_pid8.pdf
-└── scripts
-    ├── post_sample.py
-    ├── process_sample.py
-    └── verify.sh
+└── scripts/
+    ├── post_sample.py  # API usage example
+    └── verify.sh       # Verification script
 ```
+
+## Development and Testing
+
+Run the test suite:
+```bash
+python manage.py test
+```
+
+The test suite includes:
+- API endpoint functionality tests
+- Pipeline detection accuracy tests
+- PDF processing tests
+- Error handling tests
+- Input validation tests
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the test suite
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Author
+
+Stephen Est
 
 ## Setup (local)
 
